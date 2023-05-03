@@ -1,11 +1,9 @@
 import { type NextPage } from "next";
 import Head from "next/head";
-
-import { api } from "~/utils/api";
+import MidiCheck from "~/components/MidiCheck";
+import { R3FScene } from "~/components/r3fmidi/R3FScene";
 
 const Home: NextPage = () => {
-  const hello = api.example.hello.useQuery({ text: "from tRPC" });
-
   return (
     <>
       <Head>
@@ -13,7 +11,10 @@ const Home: NextPage = () => {
         <meta name="description" content="midi in the browser" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
-      <main className=""></main>
+      <main className="h-screen bg-gray-50">
+        <MidiCheck />
+        <R3FScene />
+      </main>
     </>
   );
 };

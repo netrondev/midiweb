@@ -1,16 +1,21 @@
 import { type AppType } from "next/app";
-
 import { api } from "~/utils/api";
+import { useEffect, useState } from "react";
 
 import "~/styles/globals.css";
-import MidiCheck from "~/components/MidiCheck";
 
 const MyApp: AppType = ({ Component, pageProps }) => {
-  return (
-    <MidiCheck>
-      <Component {...pageProps} />
-    </MidiCheck>
-  );
+  const [loaded, loaded_set] = useState(false);
+
+  useEffect(() => {
+    if (!loaded) {
+      loaded_set(true);
+    }
+  }, [loaded]);
+
+  if (!loaded) return null;
+
+  return <Component {...pageProps} />;
 };
 
 export default api.withTRPC(MyApp);

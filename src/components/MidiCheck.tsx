@@ -1,50 +1,48 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-import { type ReactNode } from "react";
+import { useState } from "react";
+import { useMIDI, useMIDIState } from "~/hooks/useMIDI";
+import { VerticalBar } from "./VerticalBar";
+import { useInterval } from "~/hooks/useInterval";
 
-import { WebMidi } from "webmidi";
+export default function MidiCheck() {
+  const midi = useMIDI();
+  const midi_state = useMIDIState();
+  const [count, setCount] = useState(0);
 
-// import { type MidiAccess } from "webmidi";
+  useInterval(() => {
+    setCount(count + 1);
+  }, 10);
 
-// interface NavMidi extends Navigator {
-//   requestMIDIAccess: () => Promise<MidiAccess>;
-// }
+  const recent_note = midi.notes
+    .map((i) => {
+      const ago = new Date().getTime() - i.time.getTime();
+      return Math.max(1000 - ago, 0);
+    })
+    .filter((i) => i < 1000 && i != 0)
+    .reduce((partialSum, a) => partialSum + a, 0);
 
-export default function MidiCheck(props: { children: ReactNode }) {
   return (
-    <div>
-      <button
-        onClick={() => {
-          const permission: PermissionDescriptor = {
-            name: "midi",
-            sysex: true,
-          } as unknown as PermissionDescriptor;
-
-          navigator.permissions
-            .query(permission)
-            .then((result) => {
-              console.log(result);
-              if (result.state === "granted") {
-                // Access granted.
-              } else if (result.state === "prompt") {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/unbound-method
-
-                // Using API will prompt for permission
-                navigator
-                  .requestMIDIAccess()
-                  .then((r) => {
-                    console.log(r);
-                  })
-                  .catch(console.error);
-              }
-              // Permission was denied by user prompt or permission policy
-            })
-            .catch(console.error);
+    <div className="flex gap-2 bg-gray-200 p-2">
+      <span className="self-center pr-2 text-xs text-gray-700">
+        MIDI Input:
+      </span>
+      <select
+        className="rounded border bg-white p-1"
+        value={midi.input_id}
+        onChange={(m) => {
+          midi_state.set({ input_id: m.target.value });
         }}
       >
-        Check Midi
-      </button>
-
-      {props.children}
+        <option value="" disabled>
+          Select MIDI
+        </option>
+        {midi.inputs.map((i) => (
+          <option key={i.id} value={i.id}>
+            {i.name}
+          </option>
+        ))}
+      </select>
+      <pre className="hidden">{JSON.stringify(count, null, 2)}</pre>
+      <VerticalBar percentage={recent_note / 10} />
     </div>
   );
 }
