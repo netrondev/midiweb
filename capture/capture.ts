@@ -3,6 +3,13 @@
 // typescript version: https://github.com/udevbe/xtsb
 // https://github.com/udevbe/node-x11-typescript
 
+// Start Capture
+// { wid: 6291483, inputs: { title: 'UxPlay@ghost' } }
+// {
+//   a: null,
+//   b: { depth: 32, visualId: 130, data: <Buffer 67 48 42 00> }
+// }
+
 var X,
   x11 = require("x11");
 
@@ -12,20 +19,22 @@ async function main() {
   const data = await getWID({ title: "UxPlay@ghost" });
   console.log(data);
 
-  const pixel = await getPixel({ wid: data.wid }).catch((err) => {
-    console.log(err);
-  });
+  const pixel = await getPixel({ wid: data.wid, x: 740, y: 1030 }).catch(
+    (err) => {
+      console.log(err);
+    }
+  );
 
   // draw pixel ?
 }
 
-async function getPixel(inputs: { wid: number }) {
+async function getPixel(inputs: { wid: number; x: number; y: number }) {
   return new Promise((resolve, reject) => {
     x11.createClient(function (err, display) {
       X = display.client;
       root = display.screen[0].root;
 
-      X.GetImage(2, inputs.wid, 100, 100, 1, 1, 0xffffff, (a, b) => {
+      X.GetImage(2, inputs.wid, inputs.x, inputs.y, 1, 1, 0xffffff, (a, b) => {
         console.log({ a, b });
         resolve({ a, b });
       });
