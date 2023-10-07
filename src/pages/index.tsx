@@ -13,7 +13,7 @@ const Home: NextPage = () => {
       </Head>
       <main className="h-screen bg-gray-50">
         <MidiCheck />
-        <R3FScene />
+        {/* <R3FScene /> */}
       </main>
     </>
   );
