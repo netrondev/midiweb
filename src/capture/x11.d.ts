@@ -81,6 +81,8 @@ declare module "x11" {
   };
 
   export type Tree = {
+    root: number;
+    parent: number;
     children: number[];
   };
 
