@@ -10,10 +10,11 @@
 //   b: { depth: 32, visualId: 130, data: <Buffer 67 48 42 00> }
 // }
 
-var X,
-  x11 = require("x11");
+import x11, { type Client, type Root } from "x11";
 
-let root = {};
+let X: Client | null;
+
+let root: Root | null;
 
 async function main() {
   const data = await getWID({ title: "UxPlay@ghost" });
@@ -34,15 +35,26 @@ async function getPixel(inputs: { wid: number; x: number; y: number }) {
       X = display.client;
       root = display.screen[0].root;
 
-      X.GetImage(2, inputs.wid, inputs.x, inputs.y, 1, 1, 0xffffff, (a, b) => {
-        console.log({ a, b });
-        resolve({ a, b });
-      });
+      X.GetImage(
+        2,
+        inputs.wid,
+        inputs.x,
+        inputs.y,
+        1,
+        1,
+        0xffffff,
+        (err, b) => {
+          console.log(b);
+          resolve(b);
+        }
+      );
     });
   });
 }
 
-async function getWID(inputs: { title: string }) {
+async function getWID(inputs: {
+  title: string;
+}): Promise<{ wid: number; inputs: { title: string } }> {
   console.log("Start Capture");
 
   return new Promise((resolve, reject) => {
@@ -52,6 +64,7 @@ async function getWID(inputs: { title: string }) {
 
       X.QueryTree(root, function (err, tree) {
         // console.log(tree.children); //output all windows tree
+        if (!X) return;
 
         for (const wid of tree.children) {
           X.GetProperty(
@@ -62,6 +75,7 @@ async function getWID(inputs: { title: string }) {
             0,
             10000000,
             function (err, prop) {
+              if (!X) return;
               if (prop.type == X.atoms.STRING) prop.data = prop.data.toString();
               // console.log(prop.data);
               if (prop.data === inputs.title) {
@@ -79,4 +93,4 @@ async function getWID(inputs: { title: string }) {
   });
 }
 
-main();
+main().catch(console.error);
