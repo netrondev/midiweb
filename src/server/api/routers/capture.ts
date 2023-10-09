@@ -6,21 +6,29 @@ import {
 import { createTRPCRouter, publicProcedure } from "../trpc";
 import { range } from "~/capture/range";
 
+let display = await CreateClientAsync();
+
+// let testdata = [];
+
 export const capture_router = createTRPCRouter({
   do_capture: publicProcedure.query(async () => {
-    const display = await CreateClientAsync();
+    // testdata.push(new Date());
+    if (!display) {
+      display = await CreateClientAsync();
+    }
     const wid = await FindWindowByTitle({
       display,
       title: "UxPlay@ghost",
     });
 
-    const w = 1468;
+    const paddingx = 14;
+    const w = 1468 - paddingx * 2;
     const h = 1;
 
     const pixel = await GetPixelAsync({
       display,
       wid,
-      x: 0,
+      x: paddingx,
       y: 946,
       w,
       h,
@@ -34,7 +42,7 @@ export const capture_router = createTRPCRouter({
       const p = d * 4;
       const pix = {
         id: p,
-        x: p % w,
+        x: d,
         y: Math.ceil(p / w),
         r: pixels_raw[p + 2]!,
         g: pixels_raw[p + 1]!,
