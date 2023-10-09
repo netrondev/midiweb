@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+const sequence = ["C", "D", "E", "F", "G", "A", "B"] as const;
 export function R3FPianoKeys(props: {
   key_width: number;
   key_width_black_keys: number;
@@ -21,12 +23,13 @@ export function R3FPianoKeys(props: {
       const left = k.index * props.key_width;
       return {
         index: k.index,
-        scale: [props.key_width * 0.9, 0.01, props.key_height],
-        position: [k.index * props.key_width, 0, 0],
+        // scale: [props.key_width * 0.9, 0.01, props.key_height],
+        // position: [k.index * props.key_width, 0, 0],
         width: props.key_width,
         left,
-        type: "white",
+        type: "white" as const,
         mid: left + props.key_width / 2,
+        name: sequence[k.index % 7]!,
       };
     }),
     black_keys: black_keys
@@ -36,11 +39,12 @@ export function R3FPianoKeys(props: {
         return {
           index: b.index,
           removed_key: b.index % 7 == 2 || b.index % 7 == 6,
-          scale: [props.key_width * 0.9, 0.01, props.key_height],
+          // scale: [props.key_width * 0.9, 0.01, props.key_height],
           width: props.key_width_black_keys,
           left,
-          type: "black",
+          type: "black" as const,
           mid: left + props.key_width_black_keys / 2,
+          name: sequence[b.index % 7]!,
         };
       })
       .filter((i) => !i.removed_key),
@@ -52,13 +56,10 @@ export function R3FPianoKeys(props: {
     left: number;
     type: "black" | "white";
     mid: number;
+    name: (typeof sequence)[number];
   }[] = [...output.white_keys, ...output.black_keys];
 
-  return {
-    combined,
-    white_keys: output.white_keys,
-    black_keys: output.black_keys,
-  };
+  return combined;
 
   // return (
   //   <>

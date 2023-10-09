@@ -1,15 +1,22 @@
-import { Button, Input, cn } from "netrondata";
-import { useState } from "react";
+import { Button, Heading, Input, Loading, cn } from "netrondata";
+import { useEffect, useState } from "react";
 import { R3FPianoKeys } from "~/capture/R3FPianoKeys";
 import { Countdown } from "~/components/Countdown";
-import { RouterOutputs, api } from "~/utils/api";
+import { type RouterOutputs, api } from "~/utils/api";
+
+import { temp_recording } from "~/capture/temp_recording";
 
 export default function Capture() {
   const [recording, set_recording] = useState(false);
   const [recording_start_time, set_recording_start_time] = useState<Date>();
+  const [recording_data, set_recording_data] = useState<
+    { timestamp: Date; keys: ReturnType<typeof R3FPianoKeys> }[]
+  >([]);
 
   const [initial_pixel_data, set_initial_pixel_data] =
     useState<RouterOutputs["capture"]["do_capture"]["pixel_data"]>();
+
+  // const [keys, set_keys] = useState();
 
   const [songname, set_songname] = useState("");
   const [artistname, set_artistname] = useState("");
@@ -24,14 +31,73 @@ export default function Capture() {
     },
   });
 
-  if (!docap.data) return <div>loading</div>;
-
   const keys = R3FPianoKeys({
     key_height: 1,
     key_width: 48,
     key_width_black_keys: 36,
     octave_count: 5,
-  });
+  })
+    .filter((key) => {
+      if (!docap.data) return false;
+      if (!initial_pixel_data) return false;
+      const findpixel = docap.data.pixel_data.find((i) => i.x === key.mid - 2);
+      return Boolean(findpixel);
+    })
+    .map((key) => {
+      if (!docap.data) {
+        throw new Error("missing capdata.");
+      }
+      if (!initial_pixel_data) {
+        throw new Error("initial pixel data not initialized");
+      }
+
+      const findpixel = docap.data.pixel_data.find((i) => i.x === key.mid - 2);
+      if (!findpixel) {
+        throw new Error("could not find pixel data");
+      }
+
+      const init = initial_pixel_data.find((i) => i.x == findpixel.x);
+      if (!init) {
+        throw new Error("could not find pixel data");
+      }
+
+      // has it changed?
+      const pressed =
+        Math.round(
+          (Math.abs(init.r - findpixel.r) +
+            Math.abs(init.g - findpixel.g) +
+            Math.abs(init.b - findpixel.b)) /
+            3
+        ) > 5;
+
+      return { ...key, pressed };
+    });
+
+  useEffect(() => {
+    // compare keys pressed currently to the last keys pressed in the record data, if there is a difference, mark their end times.
+    const keys_pressed = keys.filter((i) => i.pressed);
+    const lastdata = recording_data.at(-1);
+
+    if (!lastdata?.keys) {
+      set_recording_data([
+        { timestamp: new Date(), keys: keys.filter((i) => i.pressed) },
+      ]);
+      return;
+    }
+
+    if (JSON.stringify(lastdata.keys) !== JSON.stringify(keys_pressed)) {
+      set_recording_data([
+        ...recording_data,
+        { timestamp: new Date(), keys: keys.filter((i) => i.pressed) },
+      ]);
+    }
+  }, [keys]);
+
+  if (!docap.data) return <div>loading</div>;
+
+  if (!initial_pixel_data) {
+    return <Loading />;
+  }
 
   return (
     <div>
@@ -63,7 +129,7 @@ export default function Capture() {
             if (!recording) {
               set_recording(true);
               set_recording_start_time(new Date());
-              set_initial_pixel_data(docap.data.pixel_data);
+              // set_initial_pixel_data(docap.data.pixel_data);
             } else {
               set_recording(false);
             }
@@ -132,38 +198,13 @@ export default function Capture() {
           })}
         </div>
 
-        {keys.combined.map((key) => {
-          if (!initial_pixel_data) {
-            return <>init</>;
-          }
-
-          const findpixel = docap.data.pixel_data.find(
-            (i) => i.x === key.mid - 2
-          );
-          if (!findpixel) {
-            return <></>;
-          }
-
-          const init = initial_pixel_data.find((i) => i.x == findpixel.x);
-          if (!init) {
-            return <>find init pixel</>;
-          }
-
-          // has it changed?
-          const pressed =
-            Math.round(
-              (Math.abs(init.r - findpixel.r) +
-                Math.abs(init.g - findpixel.g) +
-                Math.abs(init.b - findpixel.b)) /
-                3
-            ) > 5;
-
+        {keys.map((key) => {
           return (
             <div
               key={key.index}
               className={cn(
-                "absolute top-2 z-10 h-1 w-1 bg-rose-500",
-                pressed ? "bg-yellow-500" : "bg-purple-500",
+                "absolute top-2 z-10 h-1 w-1 bg-rose-500 text-xs",
+                key.pressed ? "bg-yellow-500" : "bg-purple-500",
                 key.type === "black" ? "top-2" : "top-5"
               )}
               style={{
@@ -171,10 +212,61 @@ export default function Capture() {
                 left: key.mid - 2,
                 // backgroundColor: `rgb(${findpixel.r}, ${findpixel.g},${findpixel.b})`,
               }}
-            ></div>
+            >
+              {key.type === "black" && "#"}
+              {key.name}
+            </div>
           );
         })}
       </div>
+
+      <Heading>Recording:</Heading>
+
+      <div className="flex flex-col-reverse">
+        {temp_recording.map((i, idx, arr) => {
+          const next = arr[idx + 1];
+          const height = next
+            ? Math.abs(
+                (new Date(next.timestamp).getTime() -
+                  new Date(i.timestamp).getTime()) /
+                  10
+              )
+            : 10;
+
+          return (
+            <div key={i.timestamp} className="relative" style={{ height }}>
+              {i.keys.map((key) => {
+                return (
+                  <div
+                    key={key.index}
+                    className={cn(
+                      "absolute top-2 z-10 w-1 bg-rose-500 text-xs",
+                      key.pressed ? "bg-yellow-500" : "bg-purple-500",
+                      key.type === "black" ? "top-2" : "top-5"
+                    )}
+                    style={{
+                      // left: 30 + p.index * 48,
+                      left: key.mid - 2,
+                      height,
+                      width: key.width,
+                      // backgroundColor: `rgb(${findpixel.r}, ${findpixel.g},${findpixel.b})`,
+                    }}
+                  />
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+      {/* <pre>{JSON.stringify(recording_data, null, 2)}</pre>
+
+      <pre>
+        {JSON.stringify(
+          keys.filter((i) => i.pressed),
+          null,
+          2
+        )}
+      </pre> */}
     </div>
   );
 }
