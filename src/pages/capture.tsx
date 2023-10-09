@@ -10,7 +10,10 @@ export default function Capture() {
   const [recording, set_recording] = useState(false);
   const [recording_start_time, set_recording_start_time] = useState<Date>();
   const [recording_data, set_recording_data] = useState<
-    { timestamp: Date; keys: ReturnType<typeof R3FPianoKeys> }[]
+    {
+      timestamp: Date;
+      keys: (ReturnType<typeof R3FPianoKeys>[number] & { pressed: boolean })[];
+    }[]
   >([]);
 
   const [initial_pixel_data, set_initial_pixel_data] =
@@ -223,7 +226,7 @@ export default function Capture() {
       <Heading>Recording:</Heading>
 
       <div className="flex flex-col-reverse">
-        {temp_recording.map((i, idx, arr) => {
+        {recording_data.map((i, idx, arr) => {
           const next = arr[idx + 1];
           const height = next
             ? Math.abs(
@@ -234,7 +237,11 @@ export default function Capture() {
             : 10;
 
           return (
-            <div key={i.timestamp} className="relative" style={{ height }}>
+            <div
+              key={i.timestamp.toISOString()}
+              className="relative"
+              style={{ height }}
+            >
               {i.keys.map((key) => {
                 return (
                   <div
